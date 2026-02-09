@@ -1,0 +1,1307 @@
+@{
+    ViewData["Title"] = "RunCut - Data Management";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="data-importer-tab" data-bs-toggle="tab" data-bs-target="#data-importer" 
+                    type="button" role="tab" aria-controls="data-importer" aria-selected="true">
+                <i class="bi bi-upload"></i> Data Importer
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="data-viewer-tab" data-bs-toggle="tab" data-bs-target="#data-viewer" 
+                    type="button" role="tab" aria-controls="data-viewer" aria-selected="false">
+                <i class="bi bi-table"></i> Data Viewer
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="data-generator-tab" data-bs-toggle="tab" data-bs-target="#data-generator" 
+                    type="button" role="tab" aria-controls="data-generator" aria-selected="false">
+                <i class="bi bi-gear"></i> Data Generator
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content mt-4" id="mainTabsContent">
+        <!-- Data Importer Tab -->
+        <div class="tab-pane fade show active" id="data-importer" role="tabpanel" aria-labelledby="data-importer-tab">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-upload"></i> Import GTFS Data Files</h4>
+                </div>
+                <div class="card-body">
+                    <form id="importForm" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        
+                        <!-- Dataset Name -->
+                        <div class="mb-4">
+                            <label for="dataSetName" class="form-label fw-bold">
+                                Dataset Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="dataSetName" name="dataSetName" 
+                                   placeholder="Enter a descriptive name for this dataset (e.g., 'Sacramento Transit - Q1 2025')" required>
+                            <div class="form-text">Provide a clear, descriptive name to identify this dataset (e.g., Agency Name - Period, Location - Date Range).</div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- File Uploads -->
+                        <div class="row g-4">
+                            <!-- Routes File -->
+                            <div class="col-md-6">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <label for="routesFile" class="form-label fw-bold">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i> Routes.csv
+                                        </label>
+                                        <input type="file" class="form-control" id="routesFile" name="routesFile" 
+                                               accept=".csv" onchange="validateFile(this, 'routesFile')">
+                                        <div class="form-text mt-2">
+                                            <small>Upload the routes CSV file</small>
+                                        </div>
+                                        <div id="routesFileStatus" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stops File -->
+                            <div class="col-md-6">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <label for="stopsFile" class="form-label fw-bold">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i> Stops.csv
+                                        </label>
+                                        <input type="file" class="form-control" id="stopsFile" name="stopsFile" 
+                                               accept=".csv" onchange="validateFile(this, 'stopsFile')">
+                                        <div class="form-text mt-2">
+                                            <small>Upload the stops CSV file</small>
+                                        </div>
+                                        <div id="stopsFileStatus" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stop Timings File -->
+                            <div class="col-md-6">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <label for="stopTimingsFile" class="form-label fw-bold">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i> Stop Timings.csv
+                                        </label>
+                                        <input type="file" class="form-control" id="stopTimingsFile" name="stopTimingsFile" 
+                                               accept=".csv" onchange="validateFile(this, 'stopTimingsFile')">
+                                        <div class="form-text mt-2">
+                                            <small>Upload the stop timings CSV file</small>
+                                        </div>
+                                        <div id="stopTimingsFileStatus" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Trips File -->
+                            <div class="col-md-6">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <label for="tripsFile" class="form-label fw-bold">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i> Trips.csv
+                                        </label>
+                                        <input type="file" class="form-control" id="tripsFile" name="tripsFile" 
+                                               accept=".csv" onchange="validateFile(this, 'tripsFile')">
+                                        <div class="form-text mt-2">
+                                            <small>Upload the trips CSV file</small>
+                                        </div>
+                                        <div id="tripsFileStatus" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Calendar Dates File -->
+                            <div class="col-md-6">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <label for="calendarDatesFile" class="form-label fw-bold">
+                                            <i class="bi bi-file-earmark-spreadsheet"></i> Calendar Dates.csv
+                                        </label>
+                                        <input type="file" class="form-control" id="calendarDatesFile" name="calendarDatesFile" 
+                                               accept=".csv" onchange="validateFile(this, 'calendarDatesFile')">
+                                        <div class="form-text mt-2">
+                                            <small>Upload the calendar dates CSV file (service_id, date, exception_type)</small>
+                                        </div>
+                                        <div id="calendarDatesFileStatus" class="mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="mt-4 text-center">
+                            <button type="submit" class="btn btn-primary btn-lg px-5" id="importBtn">
+                                <i class="bi bi-upload"></i> Import Data
+                            </button>
+                            <button type="reset" class="btn btn-secondary btn-lg px-5 ms-2" id="resetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> Reset
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Progress Indicator -->
+                    <div id="importProgress" class="mt-4" style="display: none;">
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 100%">
+                                Importing data, please wait...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Result Message -->
+                    <div id="importResult" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="successModalLabel">
+                            <i class="bi bi-check-circle"></i> Success!
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="successMessage"></p>
+                        <div id="successStatistics"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="errorModalLabel">
+                            <i class="bi bi-exclamation-triangle"></i> Error!
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="errorMessage"></p>
+                        <div id="errorDetails"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Viewer Tab -->
+        <div class="tab-pane fade" id="data-viewer" role="tabpanel" aria-labelledby="data-viewer-tab">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-table"></i> Data Viewer</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Selection Controls -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="dataSetSelect" class="form-label fw-bold">Select Dataset</label>
+                            <select class="form-select" id="dataSetSelect">
+                                <option value="">-- Select Dataset --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="routeSelect" class="form-label fw-bold">Select Route</label>
+                            <select class="form-select" id="routeSelect" disabled>
+                                <option value="">-- Select Route --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Data Grids -->
+                    <div id="dataGridsContainer" style="display: none;">
+                        <!-- Trips Grid -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Trips</h5>
+                                <span class="badge bg-light text-dark" id="tripsCount">0 records</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                    <table class="table table-bordered table-hover table-sm" id="tripsTable">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th style="width: 40px;">
+                                                    <input type="checkbox" id="selectAllTrips" title="Select All">
+                                                </th>
+                                                <th>Trip ID</th>
+                                                <th>Trip Headsign</th>
+                                                <th>Trip Short Name</th>
+                                                <th>Direction ID</th>
+                                                <th>Block ID</th>
+                                                <th>Shape ID</th>
+                                                <th>Wheelchair Accessible</th>
+                                                <th>Bikes Allowed</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tripsTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stops Grid -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Stops</h5>
+                                <span class="badge bg-light text-dark" id="stopsCount">0 records</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                    <table class="table table-bordered table-hover table-sm" id="stopsTable">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th style="width: 40px;">
+                                                    <input type="checkbox" id="selectAllStops" title="Select All">
+                                                </th>
+                                                <th>Stop ID</th>
+                                                <th>Stop Code</th>
+                                                <th>Stop Name</th>
+                                                <th>Stop Description</th>
+                                                <th>Latitude</th>
+                                                <th>Longitude</th>
+                                                <th>Location Type</th>
+                                                <th>Wheelchair Boarding</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stopsTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stop Timings Grid -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-clock"></i> Stop Timings</h5>
+                                <span class="badge bg-dark text-light" id="stopTimingsCount">0 records</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-bordered table-hover table-sm" id="stopTimingsTable">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th style="width: 40px;">
+                                                    <input type="checkbox" id="selectAllStopTimings" title="Select All">
+                                                </th>
+                                                <th>Trip ID</th>
+                                                <th>Stop ID</th>
+                                                <th>Arrival Time</th>
+                                                <th>Departure Time</th>
+                                                <th>Stop Sequence</th>
+                                                <th>Stop Headsign</th>
+                                                <th>Pickup Type</th>
+                                                <th>Drop Off Type</th>
+                                                <th>Shape Dist Traveled</th>
+                                                <th>Timepoint</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stopTimingsTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calendar Dates Grid -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Calendar Dates</h5>
+                                <span class="badge bg-light text-dark" id="calendarDatesCount">0 records</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                    <table class="table table-bordered table-hover table-sm" id="calendarDatesTable">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th style="width: 40px;">
+                                                    <input type="checkbox" id="selectAllCalendarDates" title="Select All">
+                                                </th>
+                                                <th>Service ID</th>
+                                                <th>Date</th>
+                                                <th>Exception Type</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="calendarDatesTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="text-center mb-4">
+                            <button type="button" class="btn btn-primary btn-lg me-2" id="saveChangesBtn">
+                                <i class="bi bi-save"></i> Save All Changes
+                            </button>
+                            <button type="button" class="btn btn-danger btn-lg" id="deleteSelectedBtn">
+                                <i class="bi bi-trash"></i> Delete Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Generator Tab -->
+        <div class="tab-pane fade" id="data-generator" role="tabpanel" aria-labelledby="data-generator-tab">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-gear"></i> Data Generator</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Selection Controls -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label for="generatorDataSetSelect" class="form-label fw-bold">Select Dataset:</label>
+                            <select class="form-select" id="generatorDataSetSelect">
+                                <option value="">-- Select Dataset --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="generatorRouteSelect" class="form-label fw-bold">Select Route:</label>
+                            <select class="form-select" id="generatorRouteSelect" disabled>
+                                <option value="">-- Select Route --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="generatorServiceSelect" class="form-label fw-bold">Select Service ID:</label>
+                            <select class="form-select" id="generatorServiceSelect" disabled>
+                                <option value="">-- All Services --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Day type filter -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Filter by day type:</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="filterWeekdays" checked>
+                                <label class="form-check-label" for="filterWeekdays">Weekdays (Mon–Fri)</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="filterSaturday" checked>
+                                <label class="form-check-label" for="filterSaturday">Saturday</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="filterSundaysAndHolidays" checked>
+                                <label class="form-check-label" for="filterSundaysAndHolidays">Sundays &amp; holidays</label>
+                            </div>
+                            <div class="form-check form-check-inline ms-3">
+                                <input class="form-check-input" type="checkbox" id="oneRowPerTrip" checked>
+                                <label class="form-check-label" for="oneRowPerTrip">One row per trip</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="groupByDate">
+                                <label class="form-check-label" for="groupByDate">Group by date (one row per service date)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <div class="text-center mb-4">
+                        <button type="button" class="btn btn-primary btn-lg" id="generateDataBtn">
+                            <i class="bi bi-play-circle"></i> Generate Data
+                        </button>
+                    </div>
+
+                    <!-- Generated Data Grid -->
+                    <div id="generatedDataContainer" style="display: none;">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <h5 class="mb-0"><i class="bi bi-table"></i> Generated Data</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark" id="generatedDataCount">0 records</span>
+                                    <button type="button" class="btn btn-success btn-sm" id="downloadExcelBtn" title="Download as Excel">
+                                        <i class="bi bi-file-earmark-excel"></i> Download Excel
+                                    </button>
+                                    <button type="button" class="btn btn-outline-light btn-sm" id="downloadFilteredDataBtn" title="Download filtered data (main stops only, timepoint=1)">
+                                        <i class="bi bi-funnel"></i> Download Filtered Data
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                    <table class="table table-bordered table-hover table-sm" id="generatedDataTable">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>Route ID</th>
+                                                <th>Route Short Name</th>
+                                                <th>Route Long Name</th>
+                                                <th>Trip ID</th>
+                                                <th>Trip Headsign</th>
+                                                <th>Service ID</th>
+                                                <th>Direction ID</th>
+                                                <th>First Stop ID</th>
+                                                <th>First Stop Name</th>
+                                                <th>Start Time</th>
+                                                <th>Last Stop ID</th>
+                                                <th>Last Stop Name</th>
+                                                <th>End Time</th>
+                                                <th>Stop Count</th>
+                                                <th>Service Date</th>
+                                                <th>Day of Week</th>
+                                                <th>Trip Count</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="generatedDataTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script>
+        let lastGeneratedData = [];
+
+        function validateFile(input, fileType) {
+            const statusDiv = document.getElementById(fileType + 'Status');
+            if (input.files && input.files[0]) {
+                const fileName = input.files[0].name;
+                const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2); // Size in MB
+                
+                if (!fileName.toLowerCase().endsWith('.csv')) {
+                    statusDiv.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle"></i> Please select a CSV file</small>';
+                    input.value = '';
+                    return;
+                }
+                
+                statusDiv.innerHTML = `<small class="text-success"><i class="bi bi-check-circle"></i> ${fileName} (${fileSize} MB)</small>`;
+            } else {
+                statusDiv.innerHTML = '';
+            }
+        }
+
+        document.getElementById('importForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const dataSetNameInput = document.getElementById('dataSetName');
+            const dataSetName = dataSetNameInput.value;
+            
+            if (!dataSetName.trim()) {
+                showErrorModal('Please enter a dataset name');
+                dataSetNameInput.focus();
+                return;
+            }
+            
+            // Trim the dataset name
+            const trimmedName = dataSetName.trim();
+            if (trimmedName !== dataSetName) {
+                dataSetNameInput.value = trimmedName;
+            }
+            
+            formData.append('dataSetName', dataSetName);
+            
+            const files = {
+                'routesFile': document.getElementById('routesFile'),
+                'stopsFile': document.getElementById('stopsFile'),
+                'stopTimingsFile': document.getElementById('stopTimingsFile'),
+                'tripsFile': document.getElementById('tripsFile'),
+                'calendarDatesFile': document.getElementById('calendarDatesFile')
+            };
+            
+            let hasFile = false;
+            for (const [key, input] of Object.entries(files)) {
+                if (input.files && input.files[0]) {
+                    formData.append(key, input.files[0]);
+                    hasFile = true;
+                }
+            }
+            
+            if (!hasFile) {
+                showErrorModal('Please select at least one file to upload');
+                return;
+            }
+            
+            // Show progress
+            document.getElementById('importProgress').style.display = 'block';
+            document.getElementById('importBtn').disabled = true;
+            document.getElementById('importResult').innerHTML = '';
+            
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                formData.append('__RequestVerificationToken', token);
+                
+                const response = await fetch('@Url.Action("Import", "DataImporter")', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('importProgress').style.display = 'none';
+                document.getElementById('importBtn').disabled = false;
+                
+                if (result.success) {
+                    showSuccessModal(result.message, result.statistics);
+                    document.getElementById('importForm').reset();
+                    // Clear all status divs
+                    ['routesFile', 'stopsFile', 'stopTimingsFile', 'tripsFile', 'calendarDatesFile'].forEach(id => {
+                        document.getElementById(id + 'Status').innerHTML = '';
+                    });
+                } else {
+                    showErrorModal(result.message, result.errors);
+                }
+            } catch (error) {
+                document.getElementById('importProgress').style.display = 'none';
+                document.getElementById('importBtn').disabled = false;
+                showErrorModal('An error occurred: ' + error.message);
+            }
+        });
+        
+        function showSuccessModal(message, statistics) {
+            document.getElementById('successMessage').textContent = message;
+            const statsDiv = document.getElementById('successStatistics');
+            
+            if (statistics) {
+                statsDiv.innerHTML = `<hr><h6>Import Statistics:</h6>
+                        <ul class="mb-0">
+                            <li>Routes: ${statistics.routesImported || 0}</li>
+                            <li>Stops: ${statistics.stopsImported || 0}</li>
+                            <li>Stop Timings: ${statistics.stopTimingsImported || 0}</li>
+                            <li>Trips: ${statistics.tripsImported || 0}</li>
+                            <li>Calendar Dates: ${statistics.calendarDatesImported || 0}</li>
+                        </ul>`;
+            } else {
+                statsDiv.innerHTML = '';
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('successModal'));
+            modal.show();
+        }
+        
+        function showErrorModal(message, errors) {
+            document.getElementById('errorMessage').textContent = message;
+            const errorDetailsDiv = document.getElementById('errorDetails');
+            
+            if (errors && errors.length > 0) {
+                errorDetailsDiv.innerHTML = `<hr><h6>Details:</h6><ul class="mb-0">`;
+                errors.forEach(err => {
+                    errorDetailsDiv.innerHTML += `<li>${err}</li>`;
+                });
+                errorDetailsDiv.innerHTML += `</ul>`;
+            } else {
+                errorDetailsDiv.innerHTML = '';
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+            modal.show();
+        }
+
+        // Data Viewer functionality
+        let currentDataSetId = null;
+        let currentRouteId = null;
+        let editedData = {
+            trips: {},
+            stops: {},
+            stopTimings: {},
+            calendarDates: {}
+        };
+
+        // Load datasets on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDataSets();
+            loadDataSetsForGenerator();
+            
+            // Dataset selection change (Data Viewer)
+            document.getElementById('dataSetSelect').addEventListener('change', function() {
+                const dataSetId = this.value;
+                currentDataSetId = dataSetId;
+                if (dataSetId) {
+                    loadRoutes(dataSetId);
+                    document.getElementById('routeSelect').disabled = false;
+                } else {
+                    document.getElementById('routeSelect').disabled = true;
+                    document.getElementById('routeSelect').innerHTML = '<option value="">-- Select Route --</option>';
+                    document.getElementById('dataGridsContainer').style.display = 'none';
+                }
+            });
+
+            // Route selection change
+            document.getElementById('routeSelect').addEventListener('change', function() {
+                const routeId = this.value;
+                currentRouteId = routeId;
+                if (routeId && currentDataSetId) {
+                    loadDataForRoute(currentDataSetId, routeId);
+                    document.getElementById('dataGridsContainer').style.display = 'block';
+                } else {
+                    document.getElementById('dataGridsContainer').style.display = 'none';
+                    // Reset counts
+                    document.getElementById('tripsCount').textContent = '0 records';
+                    document.getElementById('stopsCount').textContent = '0 records';
+                    document.getElementById('stopTimingsCount').textContent = '0 records';
+                    document.getElementById('calendarDatesCount').textContent = '0 records';
+                }
+            });
+
+            // Save changes button
+            document.getElementById('saveChangesBtn').addEventListener('click', saveAllChanges);
+            
+            // Delete selected button
+            document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+            
+            // Select all checkboxes
+            document.getElementById('selectAllTrips').addEventListener('change', function() {
+                document.querySelectorAll('#tripsTableBody .delete-checkbox').forEach(cb => cb.checked = this.checked);
+            });
+            
+            document.getElementById('selectAllStops').addEventListener('change', function() {
+                document.querySelectorAll('#stopsTableBody .delete-checkbox').forEach(cb => cb.checked = this.checked);
+            });
+            
+            document.getElementById('selectAllStopTimings').addEventListener('change', function() {
+                document.querySelectorAll('#stopTimingsTableBody .delete-checkbox').forEach(cb => cb.checked = this.checked);
+            });
+            
+            document.getElementById('selectAllCalendarDates').addEventListener('change', function() {
+                document.querySelectorAll('#calendarDatesTableBody .delete-checkbox').forEach(cb => cb.checked = this.checked);
+            });
+
+            // Data Generator functionality
+            loadDataSetsForGenerator();
+            
+            // Dataset selection change (Data Generator)
+            document.getElementById('generatorDataSetSelect').addEventListener('change', function() {
+                const dataSetId = this.value;
+                if (dataSetId) {
+                    loadRoutesForGenerator(dataSetId);
+                    document.getElementById('generatorRouteSelect').disabled = false;
+                } else {
+                    document.getElementById('generatorRouteSelect').disabled = true;
+                    document.getElementById('generatorRouteSelect').innerHTML = '<option value="">-- Select Route --</option>';
+                    document.getElementById('generatorServiceSelect').disabled = true;
+                    document.getElementById('generatorServiceSelect').innerHTML = '<option value="">-- All Services --</option>';
+                    document.getElementById('generatedDataContainer').style.display = 'none';
+                }
+            });
+
+            // Route selection change (Data Generator) - load service IDs
+            document.getElementById('generatorRouteSelect').addEventListener('change', function() {
+                const dataSetId = document.getElementById('generatorDataSetSelect').value;
+                const routeId = this.value;
+                if (dataSetId && routeId) {
+                    loadServiceIdsForGenerator(dataSetId, routeId);
+                    document.getElementById('generatorServiceSelect').disabled = false;
+                } else {
+                    document.getElementById('generatorServiceSelect').disabled = true;
+                    document.getElementById('generatorServiceSelect').innerHTML = '<option value="">-- All Services --</option>';
+                    document.getElementById('generatedDataContainer').style.display = 'none';
+                }
+            });
+
+            // Generate Data button
+            document.getElementById('generateDataBtn').addEventListener('click', generateData);
+
+            // Download Excel button
+            document.getElementById('downloadExcelBtn').addEventListener('click', function() {
+                if (!lastGeneratedData || lastGeneratedData.length === 0) {
+                    showErrorModal('No data to download. Generate data first.');
+                    return;
+                }
+                if (typeof XLSX === 'undefined') {
+                    showErrorModal('Excel library not loaded. Please refresh the page and try again.');
+                    return;
+                }
+                const headers = ['Route ID', 'Route Short Name', 'Route Long Name', 'Trip ID', 'Trip Headsign', 'Service ID', 'Direction ID', 'First Stop ID', 'First Stop Name', 'Start Time', 'Last Stop ID', 'Last Stop Name', 'End Time', 'Stop Count', 'Service Date', 'Day of Week', 'Trip Count'];
+                const rows = lastGeneratedData.map(item => [
+                    item.routeId || '',
+                    item.routeShortName || '',
+                    item.routeLongName || '',
+                    item.tripId || '',
+                    item.tripHeadsign || '',
+                    item.serviceId || '',
+                    item.directionId ?? '',
+                    item.firstStopId || '',
+                    item.firstStopName || '',
+                    item.startTime || '',
+                    item.lastStopId || '',
+                    item.lastStopName || '',
+                    item.endTime || '',
+                    item.stopCount ?? '',
+                    item.serviceDate || '',
+                    item.dayOfWeekName || '',
+                    item.tripCount ?? ''
+                ]);
+                const wsData = [headers, ...rows];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Generated Data');
+                const fileName = 'GeneratedData_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+                XLSX.writeFile(wb, fileName);
+            });
+
+            // Download Filtered Data button (run-cut layout: rows = stops, columns = trips, cell = time or "-")
+            document.getElementById('downloadFilteredDataBtn').addEventListener('click', async function() {
+                const dataSetId = document.getElementById('generatorDataSetSelect').value;
+                const routeId = document.getElementById('generatorRouteSelect').value;
+                if (!dataSetId || !routeId) {
+                    showErrorModal('Please select Dataset and Route first.');
+                    return;
+                }
+                if (typeof XLSX === 'undefined') {
+                    showErrorModal('Excel library not loaded. Please refresh the page and try again.');
+                    return;
+                }
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
+                try {
+                    let url = `@Url.Action("GetFilteredDataForExport", "DataViewer")?dataSetId=${dataSetId}&routeId=${encodeURIComponent(routeId)}`;
+                    const serviceId = document.getElementById('generatorServiceSelect').value;
+                    if (serviceId) url += `&serviceId=${encodeURIComponent(serviceId)}`;
+                    const response = await fetch(url);
+                    const result = await response.json();
+                    if (!result.success) {
+                        showErrorModal('Error loading filtered data: ' + (result.message || 'Unknown error'));
+                        return;
+                    }
+                    const tripIds = result.tripIds || [];
+                    const matrix = result.matrix || [];
+                    const headerRow = ['Stop', ...tripIds];
+                    const wsData = [headerRow, ...matrix];
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Filtered Data (Run Cut)');
+                    const fileName = 'FilteredData_RunCut_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+                    XLSX.writeFile(wb, fileName);
+                } catch (err) {
+                    showErrorModal('Error: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-funnel"></i> Download Filtered Data';
+                }
+            });
+        });
+
+        async function loadDataSets() {
+            try {
+                const response = await fetch('@Url.Action("GetDataSets", "DataViewer")');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const select = document.getElementById('dataSetSelect');
+                    select.innerHTML = '<option value="">-- Select Dataset --</option>';
+                    result.data.forEach(ds => {
+                        const option = document.createElement('option');
+                        option.value = ds.id;
+                        option.textContent = `${ds.name} (${new Date(ds.createdDate).toLocaleDateString()})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading datasets:', error);
+            }
+        }
+
+        async function loadRoutes(dataSetId) {
+            try {
+                const response = await fetch(`@Url.Action("GetRoutes", "DataViewer")?dataSetId=${dataSetId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const select = document.getElementById('routeSelect');
+                    select.innerHTML = '<option value="">-- Select Route --</option>';
+                    result.data.forEach(route => {
+                        const option = document.createElement('option');
+                        option.value = route.routeId;
+                        option.textContent = `${route.routeShortName || route.routeId} - ${route.routeLongName || ''}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading routes:', error);
+            }
+        }
+
+        async function loadDataForRoute(dataSetId, routeId) {
+            editedData = { trips: {}, stops: {}, stopTimings: {}, calendarDates: {} };
+            
+            await Promise.all([
+                loadTrips(dataSetId, routeId),
+                loadStops(dataSetId),
+                loadStopTimings(dataSetId, routeId),
+                loadCalendarDates(dataSetId)
+            ]);
+        }
+
+        async function loadTrips(dataSetId, routeId) {
+            try {
+                const response = await fetch(`@Url.Action("GetTrips", "DataViewer")?dataSetId=${dataSetId}&routeId=${encodeURIComponent(routeId)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const tbody = document.getElementById('tripsTableBody');
+                    tbody.innerHTML = '';
+                    
+                    result.data.forEach(trip => {
+                        const row = tbody.insertRow();
+                        row.dataset.id = trip.id;
+                        row.insertCell(0).innerHTML = `<input type="checkbox" class="delete-checkbox" data-type="trip" data-id="${trip.id}">`;
+                        row.insertCell(1).textContent = trip.tripId;
+                        row.insertCell(2).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="tripHeadsign" value="${trip.tripHeadsign || ''}">`;
+                        row.insertCell(3).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="tripShortName" value="${trip.tripShortName || ''}">`;
+                        row.insertCell(4).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="directionId" value="${trip.directionId ?? ''}">`;
+                        row.insertCell(5).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="blockId" value="${trip.blockId || ''}">`;
+                        row.insertCell(6).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="shapeId" value="${trip.shapeId || ''}">`;
+                        row.insertCell(7).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="wheelchairAccessible" value="${trip.wheelchairAccessible ?? ''}">`;
+                        row.insertCell(8).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="bikesAllowed" value="${trip.bikesAllowed ?? ''}">`;
+                    });
+                    
+                    // Update record count
+                    const count = result.data.length;
+                    document.getElementById('tripsCount').textContent = `${count} record${count !== 1 ? 's' : ''}`;
+                }
+            } catch (error) {
+                console.error('Error loading trips:', error);
+            }
+        }
+
+        async function loadStops(dataSetId) {
+            try {
+                const response = await fetch(`@Url.Action("GetStops", "DataViewer")?dataSetId=${dataSetId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const tbody = document.getElementById('stopsTableBody');
+                    tbody.innerHTML = '';
+                    
+                    result.data.forEach(stop => {
+                        const row = tbody.insertRow();
+                        row.dataset.id = stop.id;
+                        row.insertCell(0).innerHTML = `<input type="checkbox" class="delete-checkbox" data-type="stop" data-id="${stop.id}">`;
+                        row.insertCell(1).textContent = stop.stopId;
+                        row.insertCell(2).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="stopCode" value="${stop.stopCode || ''}">`;
+                        row.insertCell(3).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="stopName" value="${stop.stopName || ''}">`;
+                        row.insertCell(4).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="stopDesc" value="${stop.stopDesc || ''}">`;
+                        row.insertCell(5).innerHTML = `<input type="number" step="0.000001" class="form-control form-control-sm editable" data-field="stopLat" value="${stop.stopLat ?? ''}">`;
+                        row.insertCell(6).innerHTML = `<input type="number" step="0.000001" class="form-control form-control-sm editable" data-field="stopLon" value="${stop.stopLon ?? ''}">`;
+                        row.insertCell(7).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="locationType" value="${stop.locationType ?? ''}">`;
+                        row.insertCell(8).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="wheelchairBoarding" value="${stop.wheelchairBoarding ?? ''}">`;
+                    });
+                    
+                    // Update record count
+                    const count = result.data.length;
+                    document.getElementById('stopsCount').textContent = `${count} record${count !== 1 ? 's' : ''}`;
+                }
+            } catch (error) {
+                console.error('Error loading stops:', error);
+            }
+        }
+
+        async function loadStopTimings(dataSetId, routeId) {
+            try {
+                const response = await fetch(`@Url.Action("GetStopTimings", "DataViewer")?dataSetId=${dataSetId}&routeId=${encodeURIComponent(routeId)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const tbody = document.getElementById('stopTimingsTableBody');
+                    tbody.innerHTML = '';
+                    
+                    result.data.forEach(st => {
+                        const row = tbody.insertRow();
+                        row.dataset.id = st.id;
+                        row.insertCell(0).innerHTML = `<input type="checkbox" class="delete-checkbox" data-type="stopTiming" data-id="${st.id}">`;
+                        row.insertCell(1).textContent = st.tripId;
+                        row.insertCell(2).textContent = st.stopId;
+                        row.insertCell(3).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="arrivalTime" value="${st.arrivalTime || ''}">`;
+                        row.insertCell(4).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="departureTime" value="${st.departureTime || ''}">`;
+                        row.insertCell(5).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="stopSequence" value="${st.stopSequence ?? ''}">`;
+                        row.insertCell(6).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="stopHeadsign" value="${st.stopHeadsign || ''}">`;
+                        row.insertCell(7).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="pickupType" value="${st.pickupType ?? ''}">`;
+                        row.insertCell(8).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="dropOffType" value="${st.dropOffType ?? ''}">`;
+                        row.insertCell(9).innerHTML = `<input type="number" step="0.1" class="form-control form-control-sm editable" data-field="shapeDistTraveled" value="${st.shapeDistTraveled ?? ''}">`;
+                        row.insertCell(10).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="timepoint" value="${st.timepoint ?? ''}">`;
+                    });
+                    
+                    // Update record count
+                    const count = result.data.length;
+                    document.getElementById('stopTimingsCount').textContent = `${count} record${count !== 1 ? 's' : ''}`;
+                }
+            } catch (error) {
+                console.error('Error loading stop timings:', error);
+            }
+        }
+
+        async function loadCalendarDates(dataSetId) {
+            try {
+                const response = await fetch(`@Url.Action("GetCalendarDates", "DataViewer")?dataSetId=${dataSetId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const tbody = document.getElementById('calendarDatesTableBody');
+                    tbody.innerHTML = '';
+                    
+                    result.data.forEach(cd => {
+                        const row = tbody.insertRow();
+                        row.dataset.id = cd.id;
+                        // Format date from DateTime to YYYYMMDD string
+                        const dateStr = cd.date ? (typeof cd.date === 'string' ? cd.date.substring(0, 10).replace(/-/g, '') : 
+                            new Date(cd.date).toISOString().substring(0, 10).replace(/-/g, '')) : '';
+                        row.insertCell(0).innerHTML = `<input type="checkbox" class="delete-checkbox" data-type="calendarDate" data-id="${cd.id}">`;
+                        row.insertCell(1).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="serviceId" value="${cd.serviceId || ''}">`;
+                        row.insertCell(2).innerHTML = `<input type="text" class="form-control form-control-sm editable" data-field="date" value="${dateStr}" placeholder="YYYYMMDD">`;
+                        row.insertCell(3).innerHTML = `<input type="number" class="form-control form-control-sm editable" data-field="exceptionType" value="${cd.exceptionType ?? ''}">`;
+                    });
+                    
+                    // Update record count
+                    const count = result.data.length;
+                    document.getElementById('calendarDatesCount').textContent = `${count} record${count !== 1 ? 's' : ''}`;
+                }
+            } catch (error) {
+                console.error('Error loading calendar dates:', error);
+            }
+        }
+
+        async function saveAllChanges() {
+            const btn = document.getElementById('saveChangesBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+
+            try {
+                // Collect trips data
+                const tripsData = [];
+                document.querySelectorAll('#tripsTableBody tr').forEach(row => {
+                    const tripId = parseInt(row.dataset.id);
+                    const inputs = row.querySelectorAll('.editable');
+                    const tripData = { id: tripId };
+                    inputs.forEach(input => {
+                        const value = input.value.trim();
+                        tripData[input.dataset.field] = value === '' ? null : 
+                            (input.type === 'number' ? (value ? parseFloat(value) : null) : value);
+                    });
+                    tripsData.push(tripData);
+                });
+
+                // Collect stops data
+                const stopsData = [];
+                document.querySelectorAll('#stopsTableBody tr').forEach(row => {
+                    const stopId = parseInt(row.dataset.id);
+                    const inputs = row.querySelectorAll('.editable');
+                    const stopData = { id: stopId };
+                    inputs.forEach(input => {
+                        const value = input.value.trim();
+                        stopData[input.dataset.field] = value === '' ? null : 
+                            (input.type === 'number' ? (value ? parseFloat(value) : null) : value);
+                    });
+                    stopsData.push(stopData);
+                });
+
+                // Collect stop timings data
+                const stopTimingsData = [];
+                document.querySelectorAll('#stopTimingsTableBody tr').forEach(row => {
+                    const stId = parseInt(row.dataset.id);
+                    const inputs = row.querySelectorAll('.editable');
+                    const stData = { id: stId };
+                    inputs.forEach(input => {
+                        const value = input.value.trim();
+                        stData[input.dataset.field] = value === '' ? null : 
+                            (input.type === 'number' ? (value ? parseFloat(value) : null) : value);
+                    });
+                    stopTimingsData.push(stData);
+                });
+
+                // Collect calendar dates data
+                const calendarDatesData = [];
+                document.querySelectorAll('#calendarDatesTableBody tr').forEach(row => {
+                    const cdId = parseInt(row.dataset.id);
+                    const inputs = row.querySelectorAll('.editable');
+                    const cdData = { id: cdId };
+                    inputs.forEach(input => {
+                        const value = input.value.trim();
+                        if (input.dataset.field === 'exceptionType') {
+                            cdData[input.dataset.field] = value === '' ? 0 : parseInt(value) || 0;
+                        } else {
+                            cdData[input.dataset.field] = value === '' ? '' : value;
+                        }
+                    });
+                    calendarDatesData.push(cdData);
+                });
+
+                // Save all changes
+                const [tripsResult, stopsResult, stopTimingsResult, calendarDatesResult] = await Promise.all([
+                    fetch('@Url.Action("UpdateTrips", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(tripsData)
+                    }),
+                    fetch('@Url.Action("UpdateStops", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(stopsData)
+                    }),
+                    fetch('@Url.Action("UpdateStopTimings", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(stopTimingsData)
+                    }),
+                    fetch('@Url.Action("UpdateCalendarDates", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(calendarDatesData)
+                    })
+                ]);
+
+                const tripsResponse = await tripsResult.json();
+                const stopsResponse = await stopsResult.json();
+                const stopTimingsResponse = await stopTimingsResult.json();
+                const calendarDatesResponse = await calendarDatesResult.json();
+
+                if (tripsResponse.success && stopsResponse.success && stopTimingsResponse.success && calendarDatesResponse.success) {
+                    showSuccessModal('All changes saved successfully!', null);
+                } else {
+                    const errors = [];
+                    if (!tripsResponse.success) errors.push('Trips: ' + tripsResponse.message);
+                    if (!stopsResponse.success) errors.push('Stops: ' + stopsResponse.message);
+                    if (!stopTimingsResponse.success) errors.push('Stop Timings: ' + stopTimingsResponse.message);
+                    if (!calendarDatesResponse.success) errors.push('Calendar Dates: ' + calendarDatesResponse.message);
+                    showErrorModal('Some changes could not be saved', errors);
+                }
+            } catch (error) {
+                showErrorModal('Error saving changes: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-save"></i> Save All Changes';
+            }
+        }
+
+        async function deleteSelected() {
+            const btn = document.getElementById('deleteSelectedBtn');
+            const selected = {
+                trips: [],
+                stops: [],
+                stopTimings: [],
+                calendarDates: []
+            };
+
+            // Collect selected IDs
+            document.querySelectorAll('.delete-checkbox:checked').forEach(checkbox => {
+                const type = checkbox.dataset.type;
+                const id = parseInt(checkbox.dataset.id);
+                if (type === 'trip') selected.trips.push(id);
+                else if (type === 'stop') selected.stops.push(id);
+                else if (type === 'stopTiming') selected.stopTimings.push(id);
+                else if (type === 'calendarDate') selected.calendarDates.push(id);
+            });
+
+            const totalSelected = selected.trips.length + selected.stops.length + selected.stopTimings.length + selected.calendarDates.length;
+            
+            if (totalSelected === 0) {
+                showErrorModal('Please select at least one record to delete');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete ${totalSelected} record(s)? This action cannot be undone.`)) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
+
+            try {
+                const results = await Promise.all([
+                    selected.trips.length > 0 ? fetch('@Url.Action("DeleteTrips", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(selected.trips)
+                    }) : Promise.resolve({ json: async () => ({ success: true }) }),
+                    selected.stops.length > 0 ? fetch('@Url.Action("DeleteStops", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(selected.stops)
+                    }) : Promise.resolve({ json: async () => ({ success: true }) }),
+                    selected.stopTimings.length > 0 ? fetch('@Url.Action("DeleteStopTimings", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(selected.stopTimings)
+                    }) : Promise.resolve({ json: async () => ({ success: true }) }),
+                    selected.calendarDates.length > 0 ? fetch('@Url.Action("DeleteCalendarDates", "DataViewer")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(selected.calendarDates)
+                    }) : Promise.resolve({ json: async () => ({ success: true }) })
+                ]);
+
+                const responses = await Promise.all(results.map(r => r.json()));
+                const allSuccess = responses.every(r => r.success);
+
+                if (allSuccess) {
+                    showSuccessModal(`${totalSelected} record(s) deleted successfully!`);
+                    // Reload data
+                    if (currentDataSetId && currentRouteId) {
+                        await loadDataForRoute(currentDataSetId, currentRouteId);
+                    }
+                } else {
+                    const errors = responses.filter(r => !r.success).map(r => r.message);
+                    showErrorModal('Some records could not be deleted', errors);
+                }
+            } catch (error) {
+                showErrorModal('Error deleting records: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-trash"></i> Delete Selected';
+            }
+        }
+
+        // Data Generator functions
+        async function loadDataSetsForGenerator() {
+            try {
+                const response = await fetch('@Url.Action("GetDataSets", "DataViewer")');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const select = document.getElementById('generatorDataSetSelect');
+                    select.innerHTML = '<option value="">-- Select Dataset --</option>';
+                    result.data.forEach(ds => {
+                        const option = document.createElement('option');
+                        option.value = ds.id;
+                        option.textContent = ds.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading datasets for generator:', error);
+            }
+        }
+
+        async function loadRoutesForGenerator(dataSetId) {
+            try {
+                const response = await fetch(`@Url.Action("GetRoutes", "DataViewer")?dataSetId=${dataSetId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const select = document.getElementById('generatorRouteSelect');
+                    select.innerHTML = '<option value="">-- Select Route --</option>';
+                    result.data.forEach(route => {
+                        const option = document.createElement('option');
+                        option.value = route.routeId;
+                        option.textContent = `${route.routeShortName || route.routeId} - ${route.routeLongName || ''}`;
+                        select.appendChild(option);
+                    });
+                    document.getElementById('generatorServiceSelect').innerHTML = '<option value="">-- All Services --</option>';
+                    document.getElementById('generatorServiceSelect').disabled = true;
+                }
+            } catch (error) {
+                console.error('Error loading routes for generator:', error);
+            }
+        }
+
+        async function loadServiceIdsForGenerator(dataSetId, routeId) {
+            try {
+                const response = await fetch(`@Url.Action("GetServiceIds", "DataViewer")?dataSetId=${dataSetId}&routeId=${encodeURIComponent(routeId)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const select = document.getElementById('generatorServiceSelect');
+                    select.innerHTML = '<option value="">-- All Services --</option>';
+                    result.data.forEach(serviceId => {
+                        const option = document.createElement('option');
+                        option.value = serviceId;
+                        option.textContent = serviceId;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading service IDs for generator:', error);
+            }
+        }
+
+        async function generateData() {
+            const btn = document.getElementById('generateDataBtn');
+            const dataSetId = document.getElementById('generatorDataSetSelect').value;
+            const routeId = document.getElementById('generatorRouteSelect').value;
+            const serviceId = document.getElementById('generatorServiceSelect').value;
+
+            if (!dataSetId || !routeId) {
+                showErrorModal('Please select both Dataset and Route');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+
+            try {
+                const includeWeekdays = document.getElementById('filterWeekdays').checked;
+                const includeSaturday = document.getElementById('filterSaturday').checked;
+                const includeSundaysAndHolidays = document.getElementById('filterSundaysAndHolidays').checked;
+                const groupByDate = document.getElementById('groupByDate').checked;
+                const oneRowPerTrip = document.getElementById('oneRowPerTrip').checked;
+                let url = `@Url.Action("GenerateData", "DataViewer")?dataSetId=${dataSetId}&routeId=${encodeURIComponent(routeId)}&includeWeekdays=${includeWeekdays}&includeSaturday=${includeSaturday}&includeSundaysAndHolidays=${includeSundaysAndHolidays}&groupByDate=${groupByDate}&oneRowPerTrip=${oneRowPerTrip}`;
+                if (serviceId) url += `&serviceId=${encodeURIComponent(serviceId)}`;
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    lastGeneratedData = result.data || [];
+                    displayGeneratedData(lastGeneratedData);
+                    document.getElementById('generatedDataContainer').style.display = 'block';
+                } else {
+                    showErrorModal('Error generating data: ' + result.message);
+                }
+            } catch (error) {
+                showErrorModal('Error generating data: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-circle"></i> Generate Data';
+            }
+        }
+
+        function displayGeneratedData(data) {
+            const tbody = document.getElementById('generatedDataTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = item.routeId || '';
+                row.insertCell(1).textContent = item.routeShortName || '';
+                row.insertCell(2).textContent = item.routeLongName || '';
+                row.insertCell(3).textContent = item.tripId || '';
+                row.insertCell(4).textContent = item.tripHeadsign || '';
+                row.insertCell(5).textContent = item.serviceId || '';
+                row.insertCell(6).textContent = item.directionId ?? '';
+                row.insertCell(7).textContent = item.firstStopId || '';
+                row.insertCell(8).textContent = item.firstStopName || '';
+                row.insertCell(9).textContent = item.startTime || '';
+                row.insertCell(10).textContent = item.lastStopId || '';
+                row.insertCell(11).textContent = item.lastStopName || '';
+                row.insertCell(12).textContent = item.endTime || '';
+                row.insertCell(13).textContent = item.stopCount ?? '';
+                row.insertCell(14).textContent = item.serviceDate || '';
+                row.insertCell(15).textContent = item.dayOfWeekName || '';
+                row.insertCell(16).textContent = item.tripCount ?? '';
+            });
+
+            const count = data.length;
+            document.getElementById('generatedDataCount').textContent = `${count} record${count !== 1 ? 's' : ''}`;
+        }
+
+    </script>
+}
