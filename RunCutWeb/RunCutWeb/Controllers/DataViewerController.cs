@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RunCutWeb.Application.DTOs;
 using RunCutWeb.Infrastructure.Data;
 using RouteEntity = RunCutWeb.Domain.Entities.Route;
+using ClosedXML.Excel;
 
 namespace RunCutWeb.Controllers;
 
@@ -574,7 +575,44 @@ public class DataViewerController : Controller
                     ? GroupByServiceDate(filtered)
                     : filtered.Select(x => AddTripCount(x, 1)).ToList();
 
-            return Json(new { success = true, data = final });
+            // 8. Build matrix format: columns = stop names (timepoint == 1 only), rows = one per (trip or trip+date) with HH:MM timings only
+            var orderedStopIds = stopTimings
+                .Where(st => st.TripId == trips[0].TripId && st.Timepoint == 1)
+                .OrderBy(st => st.StopSequence ?? 0)
+                .Select(st => st.StopId)
+                .ToList();
+            var stopNames = orderedStopIds
+                .Select(sid => stopMap.TryGetValue(sid, out var s) ? (s.StopName ?? sid) : sid)
+                .ToList();
+
+            var timeLookup = new Dictionary<(string TripId, int Index), string>();
+            foreach (var trip in trips)
+            {
+                var timingsForTrip = stopTimings
+                    .Where(st => st.TripId == trip.TripId && st.Timepoint == 1)
+                    .OrderBy(st => st.StopSequence ?? 0)
+                    .ToList();
+                for (var i = 0; i < timingsForTrip.Count; i++)
+                {
+                    var st = timingsForTrip[i];
+                    var raw = !string.IsNullOrEmpty(st.DepartureTime) ? st.DepartureTime : st.ArrivalTime ?? "-";
+                    var time = raw.Length > 5 ? raw.Substring(0, 5) : raw; // HH:MM:SS -> HH:MM
+                    timeLookup[(trip.TripId, i)] = time;
+                }
+            }
+
+            var matrixRowsSource = filtered; // each row has TripId
+            var rows = matrixRowsSource
+                .Select(row =>
+                {
+                    var tripId = ((dynamic)row).TripId?.ToString() ?? "";
+                    return orderedStopIds
+                        .Select((_, i) => timeLookup.TryGetValue((tripId, i), out var t) ? t : "-")
+                        .ToList();
+                })
+                .ToList();
+
+            return Json(new { success = true, stopNames, rows });
         }
         catch (Exception ex)
         {
@@ -715,6 +753,50 @@ public class DataViewerController : Controller
             ServiceDate = serviceDate,
             DayOfWeekName = dayOfWeekName
         };
+    }
+
+    /// <summary>Parse an uploaded Excel file and return headers + rows for Data Validator.</summary>
+    [HttpPost]
+    public async Task<IActionResult> ParseExcelForValidator(IFormFile excelFile, CancellationToken cancellationToken)
+    {
+        if (excelFile == null || excelFile.Length == 0)
+            return Json(new { success = false, message = "Please select an Excel file." });
+        try
+        {
+            using var stream = excelFile.OpenReadStream();
+            using var workbook = new XLWorkbook(stream);
+            var ws = workbook.Worksheet(1);
+            var usedRange = ws.RangeUsed();
+            if (usedRange == null)
+                return Json(new { success = true, headers = Array.Empty<string>(), rows = new List<List<string?>>() });
+            var firstRow = usedRange.FirstRow();
+            var lastRow = usedRange.LastRow();
+            var lastCol = usedRange.LastColumn().ColumnNumber();
+            var headers = new List<string>();
+            for (var c = 1; c <= lastCol; c++)
+            {
+                var val = firstRow.Cell(c).GetString();
+                headers.Add(string.IsNullOrWhiteSpace(val) ? $"Column{c}" : val);
+            }
+            var rows = new List<List<string?>>();
+            for (var r = firstRow.RowNumber() + 1; r <= lastRow.RowNumber(); r++)
+            {
+                var row = ws.Row(r);
+                var list = new List<string?>();
+                for (var c = 1; c <= lastCol; c++)
+                {
+                    var s = row.Cell(c).GetString();
+                    list.Add(string.IsNullOrWhiteSpace(s) ? null : s.Trim());
+                }
+                rows.Add(list);
+            }
+            return Json(new { success = true, headers, rows });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error parsing Excel for validator");
+            return Json(new { success = false, message = ex.Message });
+        }
     }
 }
 
