@@ -103,5 +103,6 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.DateKey);
             entity.Property(e => e.DayName).HasMaxLength(20);
         });
+
     }
 }

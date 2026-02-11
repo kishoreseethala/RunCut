@@ -23,6 +23,12 @@
                 <i class="bi bi-gear"></i> Data Generator
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="data-validator-tab" data-bs-toggle="tab" data-bs-target="#data-validator" 
+                    type="button" role="tab" aria-controls="data-validator" aria-selected="false">
+                <i class="bi bi-shield-check"></i> Data Validator
+            </button>
+        </li>
     </ul>
 
     <!-- Tab Content -->
@@ -445,28 +451,105 @@
                                 <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
                                     <table class="table table-bordered table-hover table-sm" id="generatedDataTable">
                                         <thead class="table-light sticky-top">
-                                            <tr>
-                                                <th>Route ID</th>
-                                                <th>Route Short Name</th>
-                                                <th>Route Long Name</th>
-                                                <th>Trip ID</th>
-                                                <th>Trip Headsign</th>
-                                                <th>Service ID</th>
-                                                <th>Direction ID</th>
-                                                <th>First Stop ID</th>
-                                                <th>First Stop Name</th>
-                                                <th>Start Time</th>
-                                                <th>Last Stop ID</th>
-                                                <th>Last Stop Name</th>
-                                                <th>End Time</th>
-                                                <th>Stop Count</th>
-                                                <th>Service Date</th>
-                                                <th>Day of Week</th>
-                                                <th>Trip Count</th>
+                                            <tr id="generatedDataHeaderRow">
+                                                <!-- Stop names inserted by JS -->
                                             </tr>
                                         </thead>
                                         <tbody id="generatedDataTableBody"></tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Validator Tab -->
+        <div class="tab-pane fade" id="data-validator" role="tabpanel" aria-labelledby="data-validator-tab">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-shield-check"></i> Data Validator</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-2">Select dataset, route, and day type. The left table is generated from Data Generator; upload an Excel file to compare against it.</p>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="validatorDataSetSelect" class="form-label fw-bold">Dataset</label>
+                            <select class="form-select" id="validatorDataSetSelect">
+                                <option value="">-- Select Dataset --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="validatorRouteSelect" class="form-label fw-bold">Route</label>
+                            <select class="form-select" id="validatorRouteSelect" disabled>
+                                <option value="">-- Select Route --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="validatorDayTypeSelect" class="form-label fw-bold">Day type</label>
+                            <select class="form-select" id="validatorDayTypeSelect">
+                                <option value="">-- Select --</option>
+                                <option value="all">All days</option>
+                                <option value="weekdays">Weekdays (Mon–Fri)</option>
+                                <option value="saturday">Saturday</option>
+                                <option value="sundays">Sundays &amp; holidays</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            <label for="validatorExcelFile" class="form-label fw-bold">Upload Excel to compare</label>
+                            <input type="file" class="form-control" id="validatorExcelFile" accept=".xlsx,.xls">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="button" class="btn btn-success" id="validatorCompareBtn">
+                                <i class="bi bi-arrow-left-right"></i> Load &amp; Compare
+                            </button>
+                        </div>
+                    </div>
+                    <div id="validatorProgress" class="mb-3" style="display: none;">
+                        <div class="spinner-border spinner-border-sm text-success"></div> Loading...
+                    </div>
+                    <div id="validatorError" class="alert alert-danger py-2 mb-3" style="display: none;"></div>
+                    <div class="mb-2" id="validatorLegend" style="display: none;">
+                        <span class="badge bg-warning text-dark me-2">Yellow</span> = value differs between tables
+                        <span class="badge bg-danger ms-3 me-2">Red</span> = missing in one or both tables
+                        <span class="ms-3 text-muted">Cells are editable. Click any cell to change it, then download below.</span>
+                    </div>
+                    <div class="mb-2" id="validatorDownloadRow" style="display: none;">
+                        <button type="button" class="btn btn-success btn-sm" id="validatorDownloadBtn">
+                            <i class="bi bi-download"></i> Download edited data (Excel)
+                        </button>
+                    </div>
+                    <div class="row g-3" id="validatorTablesContainer" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-secondary text-white py-2">
+                                    <strong>Generated data (Data Generator)</strong>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive" style="max-height: 500px; overflow: auto;">
+                                        <table class="table table-bordered table-sm mb-0" id="validatorLeftTable">
+                                            <thead class="table-light sticky-top" id="validatorLeftThead"></thead>
+                                            <tbody id="validatorLeftTbody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-info text-white py-2">
+                                    <strong>Uploaded Excel (this file)</strong>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive" style="max-height: 500px; overflow: auto;">
+                                        <table class="table table-bordered table-sm mb-0" id="validatorRightTable">
+                                            <thead class="table-light sticky-top" id="validatorRightThead"></thead>
+                                            <tbody id="validatorRightTbody"></tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -577,8 +660,8 @@
                 showErrorModal('An error occurred: ' + error.message);
             }
         });
-        
-        function showSuccessModal(message, statistics) {
+
+function showSuccessModal(message, statistics) {
             document.getElementById('successMessage').textContent = message;
             const statsDiv = document.getElementById('successStatistics');
             
@@ -721,9 +804,9 @@
             // Generate Data button
             document.getElementById('generateDataBtn').addEventListener('click', generateData);
 
-            // Download Excel button
+            // Download Excel button (stop names as headers, rows = HH:MM timings)
             document.getElementById('downloadExcelBtn').addEventListener('click', function() {
-                if (!lastGeneratedData || lastGeneratedData.length === 0) {
+                if (!lastGeneratedData || !lastGeneratedData.stopNames || !lastGeneratedData.rows || lastGeneratedData.rows.length === 0) {
                     showErrorModal('No data to download. Generate data first.');
                     return;
                 }
@@ -731,27 +814,7 @@
                     showErrorModal('Excel library not loaded. Please refresh the page and try again.');
                     return;
                 }
-                const headers = ['Route ID', 'Route Short Name', 'Route Long Name', 'Trip ID', 'Trip Headsign', 'Service ID', 'Direction ID', 'First Stop ID', 'First Stop Name', 'Start Time', 'Last Stop ID', 'Last Stop Name', 'End Time', 'Stop Count', 'Service Date', 'Day of Week', 'Trip Count'];
-                const rows = lastGeneratedData.map(item => [
-                    item.routeId || '',
-                    item.routeShortName || '',
-                    item.routeLongName || '',
-                    item.tripId || '',
-                    item.tripHeadsign || '',
-                    item.serviceId || '',
-                    item.directionId ?? '',
-                    item.firstStopId || '',
-                    item.firstStopName || '',
-                    item.startTime || '',
-                    item.lastStopId || '',
-                    item.lastStopName || '',
-                    item.endTime || '',
-                    item.stopCount ?? '',
-                    item.serviceDate || '',
-                    item.dayOfWeekName || '',
-                    item.tripCount ?? ''
-                ]);
-                const wsData = [headers, ...rows];
+                const wsData = [lastGeneratedData.stopNames, ...lastGeneratedData.rows];
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Generated Data');
@@ -1260,8 +1323,10 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    lastGeneratedData = result.data || [];
-                    displayGeneratedData(lastGeneratedData);
+                    const stopNames = result.stopNames || [];
+                    const rows = result.rows || [];
+                    lastGeneratedData = { stopNames, rows };
+                    displayGeneratedData(stopNames, rows);
                     document.getElementById('generatedDataContainer').style.display = 'block';
                 } else {
                     showErrorModal('Error generating data: ' + result.message);
@@ -1274,34 +1339,272 @@
             }
         }
 
-        function displayGeneratedData(data) {
-            const tbody = document.getElementById('generatedDataTableBody');
-            tbody.innerHTML = '';
-
-            data.forEach(item => {
-                const row = tbody.insertRow();
-                row.insertCell(0).textContent = item.routeId || '';
-                row.insertCell(1).textContent = item.routeShortName || '';
-                row.insertCell(2).textContent = item.routeLongName || '';
-                row.insertCell(3).textContent = item.tripId || '';
-                row.insertCell(4).textContent = item.tripHeadsign || '';
-                row.insertCell(5).textContent = item.serviceId || '';
-                row.insertCell(6).textContent = item.directionId ?? '';
-                row.insertCell(7).textContent = item.firstStopId || '';
-                row.insertCell(8).textContent = item.firstStopName || '';
-                row.insertCell(9).textContent = item.startTime || '';
-                row.insertCell(10).textContent = item.lastStopId || '';
-                row.insertCell(11).textContent = item.lastStopName || '';
-                row.insertCell(12).textContent = item.endTime || '';
-                row.insertCell(13).textContent = item.stopCount ?? '';
-                row.insertCell(14).textContent = item.serviceDate || '';
-                row.insertCell(15).textContent = item.dayOfWeekName || '';
-                row.insertCell(16).textContent = item.tripCount ?? '';
+        function displayGeneratedData(stopNames, rows) {
+            const headerRow = document.getElementById('generatedDataHeaderRow');
+            headerRow.innerHTML = '';
+            stopNames.forEach(name => {
+                const th = document.createElement('th');
+                th.textContent = name;
+                th.style.whiteSpace = 'nowrap';
+                headerRow.appendChild(th);
             });
 
-            const count = data.length;
+            const tbody = document.getElementById('generatedDataTableBody');
+            tbody.innerHTML = '';
+            rows.forEach(rowData => {
+                const row = tbody.insertRow();
+                (rowData || []).forEach((cell, i) => {
+                    const td = row.insertCell(i);
+                    td.textContent = cell ?? '-';
+                });
+            });
+
+            const count = (rows || []).length;
             document.getElementById('generatedDataCount').textContent = `${count} record${count !== 1 ? 's' : ''}`;
         }
+
+        // --- Data Validator ---
+        document.getElementById('data-validator-tab').addEventListener('shown.bs.tab', function() {
+            loadValidatorDropdowns();
+        });
+
+        async function loadValidatorDropdowns() {
+            try {
+                const dsRes = await fetch('@Url.Action("GetDataSets", "DataViewer")');
+                const dsResult = await dsRes.json();
+                const dsSelect = document.getElementById('validatorDataSetSelect');
+                if (dsResult.success && dsResult.data) {
+                    dsSelect.innerHTML = '<option value="">-- Select Dataset --</option>';
+                    dsResult.data.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.id;
+                        opt.textContent = d.name;
+                        dsSelect.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error('Validator load dropdowns:', e); }
+        }
+
+        document.getElementById('validatorDataSetSelect').addEventListener('change', async function() {
+            const id = this.value;
+            const routeSelect = document.getElementById('validatorRouteSelect');
+            routeSelect.innerHTML = '<option value="">-- Select Route --</option>';
+            routeSelect.disabled = !id;
+            if (!id) return;
+            try {
+                const res = await fetch(`@Url.Action("GetRoutes", "DataViewer")?dataSetId=${id}`);
+                const result = await res.json();
+                if (result.success && result.data) {
+                    result.data.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.routeId;
+                        opt.textContent = (r.routeShortName || r.routeId) + ' - ' + (r.routeLongName || '');
+                        routeSelect.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        });
+
+        document.getElementById('validatorCompareBtn').addEventListener('click', async function() {
+            const dataSetId = document.getElementById('validatorDataSetSelect').value;
+            const routeId = document.getElementById('validatorRouteSelect').value;
+            const dayType = document.getElementById('validatorDayTypeSelect').value;
+            const fileInput = document.getElementById('validatorExcelFile');
+            if (!dataSetId || !routeId) {
+                document.getElementById('validatorError').textContent = 'Please select Dataset and Route.';
+                document.getElementById('validatorError').style.display = 'block';
+                return;
+            }
+            if (!dayType) {
+                document.getElementById('validatorError').textContent = 'Please select Day type.';
+                document.getElementById('validatorError').style.display = 'block';
+                return;
+            }
+            if (!fileInput.files || !fileInput.files[0]) {
+                document.getElementById('validatorError').textContent = 'Please select an Excel file to compare.';
+                document.getElementById('validatorError').style.display = 'block';
+                return;
+            }
+            document.getElementById('validatorError').style.display = 'none';
+            const progress = document.getElementById('validatorProgress');
+            const container = document.getElementById('validatorTablesContainer');
+            progress.style.display = 'block';
+            container.style.display = 'none';
+            const includeWeekdays = dayType === 'all' || dayType === 'weekdays';
+            const includeSaturday = dayType === 'all' || dayType === 'saturday';
+            const includeSundaysAndHolidays = dayType === 'all' || dayType === 'sundays';
+            try {
+                const leftUrl = `@Url.Action("GenerateData", "DataViewer")?dataSetId=${dataSetId}&routeId=${encodeURIComponent(routeId)}&includeWeekdays=${includeWeekdays}&includeSaturday=${includeSaturday}&includeSundaysAndHolidays=${includeSundaysAndHolidays}&groupByDate=false&oneRowPerTrip=true`;
+                const leftRes = await fetch(leftUrl);
+                const leftResult = await leftRes.json();
+                const formData = new FormData();
+                formData.append('excelFile', fileInput.files[0]);
+                const rightRes = await fetch('@Url.Action("ParseExcelForValidator", "DataViewer")', { method: 'POST', body: formData });
+                const rightResult = await rightRes.json();
+                progress.style.display = 'none';
+                if (!leftResult.success) {
+                    document.getElementById('validatorError').textContent = 'Left (Generate Data): ' + (leftResult.message || 'Failed to load.');
+                    document.getElementById('validatorError').style.display = 'block';
+                    return;
+                }
+                if (!rightResult.success) {
+                    document.getElementById('validatorError').textContent = 'Right file: ' + (rightResult.message || 'Failed to parse.');
+                    document.getElementById('validatorError').style.display = 'block';
+                    return;
+                }
+                const leftData = { headers: leftResult.stopNames || [], rows: leftResult.rows || [] };
+                const rightData = { headers: rightResult.headers || [], rows: rightResult.rows || [] };
+                const { leftHighlights, rightHighlights, leftHeaders, leftRows, rightHeaders, rightRows } = computeComparison(leftData, rightData);
+                renderValidatorTable('validatorLeftThead', 'validatorLeftTbody', leftHeaders, leftRows, leftHighlights);
+                renderValidatorTable('validatorRightThead', 'validatorRightTbody', rightHeaders, rightRows, rightHighlights);
+                document.getElementById('validatorLegend').style.display = 'block';
+                document.getElementById('validatorDownloadRow').style.display = 'block';
+                container.style.display = 'flex';
+            } catch (e) {
+                progress.style.display = 'none';
+                document.getElementById('validatorError').textContent = 'Error: ' + e.message;
+                document.getElementById('validatorError').style.display = 'block';
+            }
+        });
+
+        function normalizeVal(v) {
+            if (v == null || v === undefined) return '';
+            const s = String(v).trim();
+            return s;
+        }
+
+        function computeComparison(left, right) {
+            const leftHeaders = left.headers || [];
+            const leftRows = left.rows || [];
+            const rightHeaders = right.headers || [];
+            const rightRows = right.rows || [];
+            const maxCols = Math.max(leftHeaders.length, rightHeaders.length);
+            const maxRows = Math.max(leftRows.length, rightRows.length);
+
+            const leftHighlights = Array(maxRows).fill(null).map(() => Array(maxCols).fill('match'));
+            const rightHighlights = Array(maxRows).fill(null).map(() => Array(maxCols).fill('match'));
+
+            const paddedLeftHeaders = [...leftHeaders];
+            while (paddedLeftHeaders.length < maxCols) paddedLeftHeaders.push('');
+            const paddedRightHeaders = [...rightHeaders];
+            while (paddedRightHeaders.length < maxCols) paddedRightHeaders.push('');
+
+            const paddedLeftRows = leftRows.map(row => {
+                const r = [...(row || [])];
+                while (r.length < maxCols) r.push('');
+                return r;
+            });
+            while (paddedLeftRows.length < maxRows) paddedLeftRows.push(Array(maxCols).fill(''));
+
+            const paddedRightRows = rightRows.map(row => {
+                const r = [...(row || [])];
+                while (r.length < maxCols) r.push('');
+                return r;
+            });
+            while (paddedRightRows.length < maxRows) paddedRightRows.push(Array(maxCols).fill(''));
+
+            for (let i = 0; i < maxRows; i++) {
+                for (let j = 0; j < maxCols; j++) {
+                    const leftVal = paddedLeftRows[i][j];
+                    const rightVal = paddedRightRows[i][j];
+                    const leftEmpty = normalizeVal(leftVal) === '';
+                    const rightEmpty = normalizeVal(rightVal) === '';
+                    let status = 'match';
+                    if (leftEmpty && rightEmpty) status = 'missing';
+                    else if (leftEmpty || rightEmpty) status = 'missing';
+                    else if (normalizeVal(leftVal) !== normalizeVal(rightVal)) status = 'mismatch';
+                    leftHighlights[i][j] = status;
+                    rightHighlights[i][j] = status;
+                }
+            }
+
+            return {
+                leftHighlights,
+                rightHighlights,
+                leftHeaders: paddedLeftHeaders,
+                leftRows: paddedLeftRows,
+                rightHeaders: paddedRightHeaders,
+                rightRows: paddedRightRows
+            };
+        }
+
+        function renderValidatorTable(theadId, tbodyId, headers, rows, highlights) {
+            const thead = document.getElementById(theadId);
+            const tbody = document.getElementById(tbodyId);
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            if (!headers || !headers.length) return;
+            const tr = document.createElement('tr');
+            headers.forEach((h, j) => {
+                const th = document.createElement('th');
+                th.textContent = h ?? '';
+                th.style.whiteSpace = 'nowrap';
+                th.contentEditable = 'true';
+                th.setAttribute('contenteditable', 'true');
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+            (rows || []).forEach((row, i) => {
+                const rowTr = document.createElement('tr');
+                const rowHighlights = (highlights && highlights[i]) || [];
+                headers.forEach((_, j) => {
+                    const td = document.createElement('td');
+                    td.textContent = (row && row[j] != null) ? row[j] : '';
+                    td.contentEditable = 'true';
+                    td.setAttribute('contenteditable', 'true');
+                    const status = rowHighlights[j];
+                    if (status === 'mismatch') {
+                        td.classList.add('bg-warning');
+                    } else if (status === 'missing') {
+                        td.classList.add('bg-danger', 'text-white');
+                    }
+                    td.style.whiteSpace = 'nowrap';
+                    rowTr.appendChild(td);
+                });
+                tbody.appendChild(rowTr);
+            });
+        }
+
+        function getValidatorTableData(theadId, tbodyId) {
+            const thead = document.getElementById(theadId);
+            const tbody = document.getElementById(tbodyId);
+            const headers = [];
+            const firstRow = thead && thead.querySelector('tr');
+            if (firstRow) {
+                firstRow.querySelectorAll('th').forEach(th => headers.push((th.textContent || '').trim()));
+            }
+            const rows = [];
+            if (tbody) {
+                tbody.querySelectorAll('tr').forEach(tr => {
+                    const row = [];
+                    tr.querySelectorAll('td').forEach(td => row.push((td.textContent || '').trim()));
+                    rows.push(row);
+                });
+            }
+            return { headers, rows };
+        }
+
+        document.getElementById('validatorDownloadBtn').addEventListener('click', function() {
+            if (typeof XLSX === 'undefined') {
+                showErrorModal('Excel library not loaded. Please refresh the page and try again.');
+                return;
+            }
+            const left = getValidatorTableData('validatorLeftThead', 'validatorLeftTbody');
+            const right = getValidatorTableData('validatorRightThead', 'validatorRightTbody');
+            const wb = XLSX.utils.book_new();
+            if (left.headers.length) {
+                const leftData = [left.headers, ...left.rows];
+                const wsLeft = XLSX.utils.aoa_to_sheet(leftData);
+                XLSX.utils.book_append_sheet(wb, wsLeft, 'Generated');
+            }
+            if (right.headers.length) {
+                const rightData = [right.headers, ...right.rows];
+                const wsRight = XLSX.utils.aoa_to_sheet(rightData);
+                XLSX.utils.book_append_sheet(wb, wsRight, 'Uploaded');
+            }
+            const fileName = 'ValidatorData_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+            XLSX.writeFile(wb, fileName);
+        });
 
     </script>
 }
