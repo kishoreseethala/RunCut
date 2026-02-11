@@ -575,9 +575,24 @@ public class DataViewerController : Controller
                     ? GroupByServiceDate(filtered)
                     : filtered.Select(x => AddTripCount(x, 1)).ToList();
 
+            // Prefer time direction 1 in the table; if none, show all (e.g. direction 0)
+            var filteredDirection1 = filtered.Where(x =>
+            {
+                try
+                {
+                    var dir = ((dynamic)x).DirectionId;
+                    return dir != null && Convert.ToInt32(dir) == 1;
+                }
+                catch { return false; }
+            }).ToList();
+            var filteredForDisplay = filteredDirection1.Count > 0 ? filteredDirection1 : filtered;
+
             // 8. Build matrix format: columns = stop names (timepoint == 1 only), rows = one per (trip or trip+date) with HH:MM timings only
+            // Use first displayed trip for column order so headers (e.g. Marshall, Southport) match the data
+            var firstDisplayTripId = filteredForDisplay.Count > 0 ? ((dynamic)filteredForDisplay[0]).TripId?.ToString() ?? "" : "";
+            var columnOrderTrip = string.IsNullOrEmpty(firstDisplayTripId) ? trips[0] : trips.FirstOrDefault(t => t.TripId == firstDisplayTripId) ?? trips[0];
             var orderedStopIds = stopTimings
-                .Where(st => st.TripId == trips[0].TripId && st.Timepoint == 1)
+                .Where(st => st.TripId == columnOrderTrip.TripId && st.Timepoint == 1)
                 .OrderBy(st => st.StopSequence ?? 0)
                 .Select(st => st.StopId)
                 .ToList();
@@ -585,29 +600,29 @@ public class DataViewerController : Controller
                 .Select(sid => stopMap.TryGetValue(sid, out var s) ? (s.StopName ?? sid) : sid)
                 .ToList();
 
-            var timeLookup = new Dictionary<(string TripId, int Index), string>();
+            // Key by (tripId, stopId) so times align with column headers regardless of trip stop order
+            var timeLookup = new Dictionary<(string TripId, string StopId), string>();
             foreach (var trip in trips)
             {
                 var timingsForTrip = stopTimings
                     .Where(st => st.TripId == trip.TripId && st.Timepoint == 1)
                     .OrderBy(st => st.StopSequence ?? 0)
                     .ToList();
-                for (var i = 0; i < timingsForTrip.Count; i++)
+                foreach (var st in timingsForTrip)
                 {
-                    var st = timingsForTrip[i];
                     var raw = !string.IsNullOrEmpty(st.DepartureTime) ? st.DepartureTime : st.ArrivalTime ?? "-";
                     var time = raw.Length > 5 ? raw.Substring(0, 5) : raw; // HH:MM:SS -> HH:MM
-                    timeLookup[(trip.TripId, i)] = time;
+                    timeLookup[(trip.TripId, st.StopId)] = time;
                 }
             }
 
-            var matrixRowsSource = filtered; // each row has TripId
+            var matrixRowsSource = filteredForDisplay; // each row has TripId
             var rows = matrixRowsSource
                 .Select(row =>
                 {
                     var tripId = ((dynamic)row).TripId?.ToString() ?? "";
                     return orderedStopIds
-                        .Select((_, i) => timeLookup.TryGetValue((tripId, i), out var t) ? t : "-")
+                        .Select(stopId => timeLookup.TryGetValue((tripId, stopId), out var t) ? t : "-")
                         .ToList();
                 })
                 .ToList();
