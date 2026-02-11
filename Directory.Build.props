@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!-- Build outside project/OneDrive to avoid MSB3021/3026/3027 (file in use by running app or OneDrive sync) -->
+    <BaseOutputPath>$(LocalAppData)\RunCutBuild\$(MSBuildProjectName)\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(LocalAppData)\RunCutBuild\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>
