@@ -22,6 +22,19 @@ public class DataImportService : IDataImportService
         _logger = logger;
     }
 
+    private static string GetFullExceptionMessage(Exception ex)
+    {
+        if (ex == null) return string.Empty;
+        var msg = ex.Message;
+        var inner = ex.InnerException;
+        while (inner != null)
+        {
+            msg += " " + inner.Message;
+            inner = inner.InnerException;
+        }
+        return msg;
+    }
+
     public async Task<ImportResultDto> ImportDataSetAsync(ImportRequestDto request, CancellationToken cancellationToken = default)
     {
         var result = new ImportResultDto();
@@ -42,106 +55,118 @@ public class DataImportService : IDataImportService
                 return result;
             }
 
-            // Create DataSet
-            var dataSet = new DataSet
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async (ct) =>
             {
-                Name = trimmedName,
-                CreatedDate = DateTime.UtcNow
-            };
-
-            _context.DataSets.Add(dataSet);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            result.DataSetId = dataSet.Id;
-
-            // Import Routes
-            if (request.RoutesFile != null && request.RoutesFile.Length > 0)
-            {
-                var routes = await ParseRoutesCsvAsync(request.RoutesFile, dataSet.Id, cancellationToken);
-                if (routes.Any())
-                {
-                    await _context.Routes.AddRangeAsync(routes, cancellationToken);
-                    statistics.RoutesImported = routes.Count;
-                }
-            }
-
-            // Import Stops
-            if (request.StopsFile != null && request.StopsFile.Length > 0)
-            {
-                var stops = await ParseStopsCsvAsync(request.StopsFile, dataSet.Id, cancellationToken);
-                if (stops.Any())
-                {
-                    await _context.Stops.AddRangeAsync(stops, cancellationToken);
-                    statistics.StopsImported = stops.Count;
-                }
-            }
-
-            // Import Trips
-            if (request.TripsFile != null && request.TripsFile.Length > 0)
-            {
-                var trips = await ParseTripsCsvAsync(request.TripsFile, dataSet.Id, cancellationToken);
-                if (trips.Any())
-                {
-                    await _context.Trips.AddRangeAsync(trips, cancellationToken);
-                    statistics.TripsImported = trips.Count;
-                }
-            }
-
-            // Import StopTimings in batches (should be imported after Trips and Stops)
-            if (request.StopTimingsFile != null && request.StopTimingsFile.Length > 0)
-            {
-                var importedCount = await ImportStopTimingsInBatchesAsync(request.StopTimingsFile, dataSet.Id, cancellationToken);
-                statistics.StopTimingsImported = importedCount;
-            }
-
-            // Import CalendarDates
-            if (request.CalendarDatesFile != null && request.CalendarDatesFile.Length > 0)
-            {
+                await using var transaction = await _context.Database.BeginTransactionAsync(ct);
                 try
                 {
-                    _logger.LogInformation($"Starting Calendar Dates import. File size: {request.CalendarDatesFile.Length} bytes, File name: {request.CalendarDatesFile.FileName}");
-                    var calendarDates = await ParseCalendarDatesCsvAsync(request.CalendarDatesFile, dataSet.Id, cancellationToken);
-                    _logger.LogInformation($"Parsed {calendarDates.Count} calendar dates from CSV");
-                    
-                    if (calendarDates.Any())
+                    // Create DataSet
+                    var dataSet = new DataSet
                     {
-                        _context.ChangeTracker.AutoDetectChangesEnabled = false;
-                        await _context.CalendarDates.AddRangeAsync(calendarDates, cancellationToken);
-                        var savedCount = await _context.SaveChangesAsync(cancellationToken);
-                        _context.ChangeTracker.AutoDetectChangesEnabled = true;
+                        Name = trimmedName,
+                        CreatedDate = DateTime.UtcNow
+                    };
+                    _context.DataSets.Add(dataSet);
+                await _context.SaveChangesAsync(cancellationToken);
+                result.DataSetId = dataSet.Id;
+
+                // Import Routes, Stops, Trips — save each immediately
+                _context.ChangeTracker.AutoDetectChangesEnabled = false;
+                if (request.RoutesFile != null && request.RoutesFile.Length > 0)
+                {
+                    var routes = await ParseRoutesCsvAsync(request.RoutesFile, dataSet.Id, cancellationToken);
+                    if (routes.Any())
+                    {
+                        await _context.Routes.AddRangeAsync(routes, cancellationToken);
+                        await _context.SaveChangesAsync(cancellationToken);
                         _context.ChangeTracker.Clear();
-                        statistics.CalendarDatesImported = calendarDates.Count;
-                        _logger.LogInformation($"Successfully imported {calendarDates.Count} calendar dates. SaveChanges returned: {savedCount}");
+                        statistics.RoutesImported = routes.Count;
                     }
-                    else
+                }
+
+                if (request.StopsFile != null && request.StopsFile.Length > 0)
+                {
+                    var stops = await ParseStopsCsvAsync(request.StopsFile, dataSet.Id, cancellationToken);
+                    if (stops.Any())
                     {
-                        _logger.LogWarning("No calendar dates were parsed from the CSV file. Check the file format and column names.");
-                        result.Errors.Add("No calendar dates were parsed from the CSV file. Please check the file format.");
+                        await _context.Stops.AddRangeAsync(stops, cancellationToken);
+                        await _context.SaveChangesAsync(cancellationToken);
+                        _context.ChangeTracker.Clear();
+                        statistics.StopsImported = stops.Count;
                     }
+                }
+
+                if (request.TripsFile != null && request.TripsFile.Length > 0)
+                {
+                    var trips = await ParseTripsCsvAsync(request.TripsFile, dataSet.Id, cancellationToken);
+                    if (trips.Any())
+                    {
+                        await _context.Trips.AddRangeAsync(trips, cancellationToken);
+                        await _context.SaveChangesAsync(cancellationToken);
+                        _context.ChangeTracker.Clear();
+                        statistics.TripsImported = trips.Count;
+                    }
+                }
+
+                _context.ChangeTracker.AutoDetectChangesEnabled = true;
+
+                // Import StopTimings in batches (should be imported after Trips and Stops)
+                if (request.StopTimingsFile != null && request.StopTimingsFile.Length > 0)
+                {
+                    var importedCount = await ImportStopTimingsInBatchesAsync(request.StopTimingsFile, dataSet.Id, cancellationToken);
+                    statistics.StopTimingsImported = importedCount;
+                }
+
+                // Import CalendarDates
+                if (request.CalendarDatesFile != null && request.CalendarDatesFile.Length > 0)
+                {
+                    try
+                    {
+                        _logger.LogInformation($"Starting Calendar Dates import. File size: {request.CalendarDatesFile.Length} bytes, File name: {request.CalendarDatesFile.FileName}");
+                        var calendarDates = await ParseCalendarDatesCsvAsync(request.CalendarDatesFile, dataSet.Id, cancellationToken);
+                        _logger.LogInformation($"Parsed {calendarDates.Count} calendar dates from CSV");
+                        if (calendarDates.Any())
+                        {
+                            _context.ChangeTracker.AutoDetectChangesEnabled = false;
+                            await _context.CalendarDates.AddRangeAsync(calendarDates, cancellationToken);
+                            await _context.SaveChangesAsync(cancellationToken);
+                            _context.ChangeTracker.AutoDetectChangesEnabled = true;
+                            _context.ChangeTracker.Clear();
+                            statistics.CalendarDatesImported = calendarDates.Count;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error importing calendar dates");
+                        result.Errors.Add($"Error importing calendar dates: {GetFullExceptionMessage(ex)}");
+                    }
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(ct);
+                result.IsSuccess = true;
+                result.Message = "Data imported successfully";
+                result.Statistics = statistics;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error importing calendar dates");
-                    result.Errors.Add($"Error importing calendar dates: {ex.Message}");
+                    await transaction.RollbackAsync(ct);
+                    var message = GetFullExceptionMessage(ex);
+                    _logger.LogError(ex, "Error importing data set: {Message}", message);
+                    result.IsSuccess = false;
+                    result.Message = $"Error importing data: {message}";
+                    result.Errors.Add(message);
                 }
-            }
-            else
-            {
-                _logger.LogInformation("No Calendar Dates file provided for import");
-            }
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            result.IsSuccess = true;
-            result.Message = "Data imported successfully";
-            result.Statistics = statistics;
+            }, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error importing data set");
+            var message = GetFullExceptionMessage(ex);
+            _logger.LogError(ex, "Error importing data set: {Message}", message);
             result.IsSuccess = false;
-            result.Message = $"Error importing data: {ex.Message}";
-            result.Errors.Add(ex.Message);
+            result.Message = $"Error importing data: {message}";
+            result.Errors.Add(message);
         }
 
         return result;
@@ -247,7 +272,7 @@ public class DataImportService : IDataImportService
 
     private async Task<int> ImportStopTimingsInBatchesAsync(IFormFile file, int dataSetId, CancellationToken cancellationToken)
     {
-        const int batchSize = 1000; // Process 1000 records at a time
+        const int batchSize = 5000; // Larger batches = fewer round-trips to DB (especially over network)
         var totalImported = 0;
         var batch = new List<StopTiming>(batchSize);
 
@@ -404,11 +429,14 @@ public class DataImportService : IDataImportService
 
                     var exceptionType = ParseInt(exceptionTypeValue) ?? 1;
 
+                    // PostgreSQL timestamp with time zone requires UTC; GTFS date is date-only so treat as UTC
+                    var dateUtc = DateTime.SpecifyKind(date.Value, DateTimeKind.Utc);
+
                     var calendarDate = new CalendarDate
                     {
                         DataSetId = dataSetId,
                         ServiceId = serviceId,
-                        Date = date.Value,
+                        Date = dateUtc,
                         ExceptionType = exceptionType
                     };
                     calendarDates.Add(calendarDate);

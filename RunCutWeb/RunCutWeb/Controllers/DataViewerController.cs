@@ -266,7 +266,7 @@ public class DataViewerController : Controller
                         if (DateTime.TryParseExact(cdDto.Date, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture, 
                             System.Globalization.DateTimeStyles.None, out var parsedDate))
                         {
-                            calendarDate.Date = parsedDate;
+                            calendarDate.Date = DateTime.SpecifyKind(parsedDate, DateTimeKind.Utc);
                         }
                     }
                     calendarDate.ExceptionType = cdDto.ExceptionType;

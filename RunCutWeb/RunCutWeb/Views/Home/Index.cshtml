@@ -163,6 +163,8 @@
                                 Importing data, please wait...
                             </div>
                         </div>
+                        <p class="text-muted small mt-2 mb-0">Large files can take several minutes. Stops automatically after 10 minutes so you can report.</p>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="cancelImportBtn" style="display: none;">Cancel import</button>
                     </div>
 
                     <!-- Result Message -->
@@ -602,19 +604,19 @@
                 dataSetNameInput.value = trimmedName;
             }
             
-            formData.append('dataSetName', dataSetName);
-            
-            const files = {
-                'routesFile': document.getElementById('routesFile'),
-                'stopsFile': document.getElementById('stopsFile'),
-                'stopTimingsFile': document.getElementById('stopTimingsFile'),
-                'tripsFile': document.getElementById('tripsFile'),
-                'calendarDatesFile': document.getElementById('calendarDatesFile')
-            };
-            
+            formData.append('DataSetName', dataSetName);
+            // Use PascalCase keys to match server-side ImportRequestDto property names
+            const fileInputs = [
+                { key: 'RoutesFile', id: 'routesFile' },
+                { key: 'StopsFile', id: 'stopsFile' },
+                { key: 'StopTimingsFile', id: 'stopTimingsFile' },
+                { key: 'TripsFile', id: 'tripsFile' },
+                { key: 'CalendarDatesFile', id: 'calendarDatesFile' }
+            ];
             let hasFile = false;
-            for (const [key, input] of Object.entries(files)) {
-                if (input.files && input.files[0]) {
+            for (const { key, id } of fileInputs) {
+                const input = document.getElementById(id);
+                if (input && input.files && input.files[0]) {
                     formData.append(key, input.files[0]);
                     hasFile = true;
                 }
@@ -625,10 +627,17 @@
                 return;
             }
             
-            // Show progress
+            // Show progress and Cancel button
             document.getElementById('importProgress').style.display = 'block';
+            document.getElementById('cancelImportBtn').style.display = 'inline-block';
             document.getElementById('importBtn').disabled = true;
             document.getElementById('importResult').innerHTML = '';
+            
+            // 10-minute timeout so you can report within 10 min
+            const timeoutMs = 10 * 60 * 1000;
+            const controller = new AbortController();
+            window._currentImportAbortController = controller;
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             
             try {
                 const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
@@ -636,12 +645,29 @@
                 
                 const response = await fetch('@Url.Action("Import", "DataImporter")', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: controller.signal
                 });
                 
-                const result = await response.json();
+                clearTimeout(timeoutId);
+                window._currentImportAbortController = null;
+                document.getElementById('cancelImportBtn').style.display = 'none';
+                const contentType = response.headers.get('content-type') || '';
+                let result;
+                if (contentType.includes('application/json')) {
+                    result = await response.json();
+                } else {
+                    const text = await response.text();
+                    window._currentImportAbortController = null;
+                    document.getElementById('importProgress').style.display = 'none';
+                    document.getElementById('cancelImportBtn').style.display = 'none';
+                    document.getElementById('importBtn').disabled = false;
+                    showErrorModal('Server returned an error (HTTP ' + response.status + '). ' + (text ? 'Details may be in the browser console.' : response.statusText));
+                    return;
+                }
                 
                 document.getElementById('importProgress').style.display = 'none';
+                document.getElementById('cancelImportBtn').style.display = 'none';
                 document.getElementById('importBtn').disabled = false;
                 
                 if (result.success) {
@@ -655,9 +681,25 @@
                     showErrorModal(result.message, result.errors);
                 }
             } catch (error) {
+                clearTimeout(timeoutId);
+                window._currentImportAbortController = null;
                 document.getElementById('importProgress').style.display = 'none';
+                document.getElementById('cancelImportBtn').style.display = 'none';
                 document.getElementById('importBtn').disabled = false;
-                showErrorModal('An error occurred: ' + error.message);
+                if (error.name === 'AbortError') {
+                    showErrorModal(
+                        'Import stopped (10-minute limit or cancelled). You can report: import runs; full run may need more time for large files. ' +
+                        'Server may still be processing—check terminal if needed.'
+                    );
+                } else {
+                    showErrorModal('An error occurred: ' + (error.message || String(error)));
+                }
+            }
+        });
+        
+        document.getElementById('cancelImportBtn').addEventListener('click', function() {
+            if (window._currentImportAbortController) {
+                window._currentImportAbortController.abort();
             }
         });
 

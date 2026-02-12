@@ -69,6 +69,17 @@ public class ApplicationDbContext : DbContext
                 .WithMany(d => d.StopTimings)
                 .HasForeignKey(e => e.DataSetId)
                 .OnDelete(DeleteBehavior.Cascade);
+            // Use composite keys so EF does not add shadow columns TripId1 / StopId1
+            entity.HasOne(e => e.Trip)
+                .WithMany(t => t.StopTimings)
+                .HasForeignKey(e => new { e.DataSetId, e.TripId })
+                .HasPrincipalKey(t => new { t.DataSetId, t.TripId })
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Stop)
+                .WithMany(s => s.StopTimings)
+                .HasForeignKey(e => new { e.DataSetId, e.StopId })
+                .HasPrincipalKey(s => new { s.DataSetId, s.StopId })
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         // Configure Trip
@@ -83,6 +94,12 @@ public class ApplicationDbContext : DbContext
                 .WithMany(d => d.Trips)
                 .HasForeignKey(e => e.DataSetId)
                 .OnDelete(DeleteBehavior.Cascade);
+            // Use composite (DataSetId, RouteId) for Route relationship so EF does not add shadow column RouteId1
+            entity.HasOne(e => e.Route)
+                .WithMany(r => r.Trips)
+                .HasForeignKey(e => new { e.DataSetId, e.RouteId })
+                .HasPrincipalKey(r => new { r.DataSetId, r.RouteId })
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         // Configure CalendarDate
